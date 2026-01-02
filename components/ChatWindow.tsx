@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Message, Role } from '../types';
 import { MessageItem } from './MessageItem';
@@ -35,7 +36,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                <div className="text-center">
                  <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">How can I help you today?</h3>
                  <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                    Ask questions, write code, analyze data, or just have a chat with HANAXIA AI.
+                    Ask questions, write code, analyze data, or just have a chat with Nexus AI.
                  </p>
                </div>
                
@@ -93,7 +94,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           )}
           <ChatInput onSend={onSendMessage} disabled={isStreaming} />
           <p className="text-[10px] text-center text-gray-400 dark:text-gray-600 mt-2">
-            HANAXIA AI can make mistakes. Consider checking important information.
+            Nexus AI can make mistakes. Consider checking important information.
           </p>
         </div>
       </div>

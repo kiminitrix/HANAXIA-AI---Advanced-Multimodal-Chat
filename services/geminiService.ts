@@ -1,29 +1,33 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { Message, Role } from "../types";
 
-/**
- * Service to handle communication with Google Gemini API.
- * Follows the @google/genai guidelines for initialization and content generation.
- */
+const API_KEY = process.env.API_KEY;
+
 export class GeminiService {
+  private ai: GoogleGenAI;
+
+  constructor() {
+    this.ai = new GoogleGenAI({ apiKey: API_KEY || '' });
+  }
+
   async *streamChat(
     modelName: string,
     history: Message[],
     systemInstruction: string
   ) {
-    // Always initialize a new GoogleGenAI instance with the latest API KEY from process.env.
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    if (!API_KEY) {
+      throw new Error("API Key is missing. Please check your environment variables.");
+    }
 
-    // Convert application history format to Gemini API contents format.
+    // Convert history to Gemini format
     const contents = history.map(msg => ({
       role: msg.role === Role.USER ? 'user' : 'model',
       parts: [{ text: msg.content }]
     }));
 
     try {
-      // Use generateContentStream for streaming responses.
-      const responseStream = await ai.models.generateContentStream({
+      const responseStream = await this.ai.models.generateContentStream({
         model: modelName,
         contents: contents,
         config: {
@@ -33,7 +37,6 @@ export class GeminiService {
       });
 
       for await (const chunk of responseStream) {
-        // Access the generated text directly from the .text property of the response chunk.
         const text = chunk.text;
         if (text) {
           yield text;

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
-import { SystemPromptModal } from './components/SystemPromptModal';
 import { 
   Message, 
   Role, 
@@ -13,62 +13,49 @@ import { MODELS, INITIAL_SYSTEM_PROMPT } from './constants';
 import { geminiService } from './services/geminiService';
 
 const App: React.FC = () => {
-  // Initialize state directly from localStorage to prevent theme/content flicker
-  const [conversations, setConversations] = useState<Conversation[]>(() => {
-    const saved = localStorage.getItem('hanaxia_conversations');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('hanaxia_theme');
-    // Default to true (dark mode) if no preference is saved
-    return saved ? saved === 'dark' : true;
-  });
-
-  const [systemPrompt, setSystemPrompt] = useState<string>(() => {
-    return localStorage.getItem('hanaxia_system_prompt') || INITIAL_SYSTEM_PROMPT;
-  });
-
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [systemPrompt, setSystemPrompt] = useState(INITIAL_SYSTEM_PROMPT);
   const [selectedModelId, setSelectedModelId] = useState(MODELS[0].id);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
 
-  // Set initial active chat on mount
+  // Load state from local storage on mount
   useEffect(() => {
-    if (conversations.length > 0 && !activeId) {
-      setActiveId(conversations[0].id);
-    } else if (conversations.length === 0) {
+    const savedConvos = localStorage.getItem('nexus_conversations');
+    const savedTheme = localStorage.getItem('nexus_theme');
+    const savedPrompt = localStorage.getItem('nexus_system_prompt');
+
+    if (savedConvos) setConversations(JSON.parse(savedConvos));
+    if (savedTheme) setIsDarkMode(savedTheme === 'dark');
+    if (savedPrompt) setSystemPrompt(savedPrompt);
+
+    // Default to a new conversation if none exist
+    if (!savedConvos || JSON.parse(savedConvos).length === 0) {
       handleNewChat();
     }
   }, []);
 
-  // Sync state with localStorage
+  // Sync with localStorage
   useEffect(() => {
-    localStorage.setItem('hanaxia_conversations', JSON.stringify(conversations));
-  }, [conversations]);
-
-  useEffect(() => {
-    localStorage.setItem('hanaxia_system_prompt', systemPrompt);
-  }, [systemPrompt]);
-
-  // Handle dark mode side effects
-  useEffect(() => {
-    localStorage.setItem('hanaxia_theme', isDarkMode ? 'dark' : 'light');
+    localStorage.setItem('nexus_conversations', JSON.stringify(conversations));
+    localStorage.setItem('nexus_theme', isDarkMode ? 'dark' : 'light');
+    localStorage.setItem('nexus_system_prompt', systemPrompt);
+    
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [isDarkMode]);
+  }, [conversations, isDarkMode, systemPrompt]);
 
   const activeConversation = conversations.find(c => c.id === activeId);
 
   const handleNewChat = useCallback(() => {
     const newConvo: Conversation = {
       id: uuidv4(),
-      title: 'New Chat',
+      title: 'New Conversation',
       messages: [],
       model: selectedModelId,
       provider: MODELS.find(m => m.id === selectedModelId)?.provider || ModelProvider.GEMINI,
@@ -88,6 +75,7 @@ const App: React.FC = () => {
       timestamp: Date.now()
     };
 
+    // Update messages in the current conversation
     setConversations(prev => prev.map(c => {
       if (c.id === activeId) {
         return {
@@ -109,6 +97,7 @@ const App: React.FC = () => {
       timestamp: Date.now()
     };
 
+    // Placeholder for assistant response
     setConversations(prev => prev.map(c => {
       if (c.id === activeId) {
         return { ...c, messages: [...c.messages, assistantMessage] };
@@ -117,9 +106,11 @@ const App: React.FC = () => {
     }));
 
     try {
-      const history = activeConversation ? [...activeConversation.messages, userMessage] : [userMessage];
+      const activeConvo = conversations.find(c => c.id === activeId);
+      const history = activeConvo ? [...activeConvo.messages, userMessage] : [userMessage];
       const model = MODELS.find(m => m.id === selectedModelId) || MODELS[0];
 
+      // Streaming logic
       if (model.provider === ModelProvider.GEMINI) {
         const stream = geminiService.streamChat(model.id, history, systemPrompt);
         let accumulatedResponse = '';
@@ -137,17 +128,22 @@ const App: React.FC = () => {
           }));
         }
       } else {
-        // Fallback for non-implemented providers
-        const dummyText = `Provider ${model.provider} is currently in preview. Use Gemini for live generation.`;
-        setConversations(prev => prev.map(c => {
-          if (c.id === activeId) {
-            const newMessages = [...c.messages];
-            const lastIdx = newMessages.length - 1;
-            newMessages[lastIdx] = { ...newMessages[lastIdx], content: dummyText };
-            return { ...c, messages: newMessages };
-          }
-          return c;
-        }));
+        // Fallback simulation for non-Gemini models (UI requirements)
+        const dummyText = `This is a simulated response from ${model.name}. In a full production environment, this would call the ${model.provider} API.`;
+        let partial = '';
+        for (const word of dummyText.split(' ')) {
+          partial += word + ' ';
+          setConversations(prev => prev.map(c => {
+            if (c.id === activeId) {
+              const newMessages = [...c.messages];
+              const lastIdx = newMessages.length - 1;
+              newMessages[lastIdx] = { ...newMessages[lastIdx], content: partial };
+              return { ...c, messages: newMessages };
+            }
+            return c;
+          }));
+          await new Promise(r => setTimeout(r, 50));
+        }
       }
     } catch (err) {
       console.error(err);
@@ -155,7 +151,7 @@ const App: React.FC = () => {
         if (c.id === activeId) {
           const newMessages = [...c.messages];
           const lastIdx = newMessages.length - 1;
-          newMessages[lastIdx] = { ...newMessages[lastIdx], content: "Sorry, I encountered an error. Please check your API key and network." };
+          newMessages[lastIdx] = { ...newMessages[lastIdx], content: "Error: Failed to fetch response. Please check your connection and API key." };
           return { ...c, messages: newMessages };
         }
         return c;
@@ -168,26 +164,24 @@ const App: React.FC = () => {
   const handleDeleteConversation = (id: string) => {
     setConversations(prev => prev.filter(c => c.id !== id));
     if (activeId === id) {
-      const remaining = conversations.filter(c => c.id !== id);
-      setActiveId(remaining[0]?.id || null);
+      setActiveId(conversations[0]?.id || null);
+    }
+  };
+
+  const handleClearHistory = () => {
+    if (window.confirm("Clear all conversations?")) {
+      setConversations([]);
+      handleNewChat();
     }
   };
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-white dark:bg-[#0d1117] transition-colors duration-300">
-      <SystemPromptModal 
-        isOpen={isPromptModalOpen}
-        onClose={() => setIsPromptModalOpen(false)}
-        currentPrompt={systemPrompt}
-        onSave={setSystemPrompt}
-      />
-
-      {/* Floating Re-open Button for Mobile */}
+      {/* Sidebar Overlay for Mobile */}
       {!isSidebarOpen && (
         <button 
           onClick={() => setIsSidebarOpen(true)}
-          className="fixed bottom-4 left-4 z-50 p-3 bg-indigo-600 text-white rounded-full shadow-lg md:hidden hover:bg-indigo-700 transition-all active:scale-95 animate-in fade-in zoom-in"
-          aria-label="Open Sidebar"
+          className="fixed bottom-4 left-4 z-50 p-3 bg-indigo-600 text-white rounded-full shadow-lg md:hidden hover:bg-indigo-700 transition-all active:scale-95"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" /></svg>
         </button>
@@ -201,26 +195,20 @@ const App: React.FC = () => {
         onSelect={setActiveId}
         onNewChat={handleNewChat}
         onDelete={handleDeleteConversation}
+        onClearHistory={handleClearHistory}
         isDarkMode={isDarkMode}
         toggleTheme={() => setIsDarkMode(!isDarkMode)}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 relative h-full transition-all duration-300">
+      <main className="flex-1 flex flex-col min-w-0 relative">
+        {/* Top Header */}
         <header className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 md:px-8 bg-white/80 dark:bg-[#0d1117]/80 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-3 overflow-hidden">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all hidden md:block"
-              title={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors hidden md:block"
             >
-               <svg 
-                 className={`w-5 h-5 text-gray-500 transition-transform duration-300 ${isSidebarOpen ? '' : 'rotate-180'}`} 
-                 fill="none" 
-                 stroke="currentColor" 
-                 viewBox="0 0 24 24"
-               >
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-               </svg>
+               <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h8m-8 6h16" /></svg>
             </button>
             <h1 className="font-semibold text-lg truncate text-gray-800 dark:text-gray-100">
               {activeConversation?.title || 'New Chat'}
@@ -230,14 +218,17 @@ const App: React.FC = () => {
              <select 
                value={selectedModelId}
                onChange={(e) => setSelectedModelId(e.target.value)}
-               className="bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer outline-none"
+               className="bg-gray-50 dark:bg-gray-800 border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer outline-none"
              >
                {MODELS.map(m => (
                  <option key={m.id} value={m.id}>{m.name}</option>
                ))}
              </select>
              <button 
-              onClick={() => setIsPromptModalOpen(true)}
+              onClick={() => {
+                const p = prompt("Customize System Instruction:", systemPrompt);
+                if (p !== null) setSystemPrompt(p);
+              }}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-400"
               title="System Prompt"
              >
@@ -253,6 +244,7 @@ const App: React.FC = () => {
           onRegenerate={() => {
             const lastUserMsg = activeConversation?.messages.filter(m => m.role === Role.USER).pop();
             if (lastUserMsg) {
+              // Delete the last assistant message first
               setConversations(prev => prev.map(c => {
                 if (c.id === activeId) {
                   const newMsgs = [...c.messages];
