@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
@@ -13,55 +14,45 @@ import { MODELS, INITIAL_SYSTEM_PROMPT } from './constants';
 import { geminiService } from './services/geminiService';
 
 const App: React.FC = () => {
-  // Initialize state from local storage directly to prevent flashing
-  const [conversations, setConversations] = useState<Conversation[]>(() => {
-    const saved = localStorage.getItem('hanaxia_conversations');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('hanaxia_theme');
-    if (saved) return saved === 'dark';
-    // Default to dark mode if no preference is saved
-    return true;
-  });
-
-  const [systemPrompt, setSystemPrompt] = useState<string>(() => {
-    return localStorage.getItem('hanaxia_system_prompt') || INITIAL_SYSTEM_PROMPT;
-  });
-
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [systemPrompt, setSystemPrompt] = useState(INITIAL_SYSTEM_PROMPT);
   const [selectedModelId, setSelectedModelId] = useState(MODELS[0].id);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
 
-  // Set initial active chat and handle class-based dark mode
+  // Load state from local storage on mount
   useEffect(() => {
-    if (conversations.length > 0 && !activeId) {
-      setActiveId(conversations[0].id);
-    } else if (conversations.length === 0) {
+    const savedConvos = localStorage.getItem('hanaxia_conversations');
+    const savedTheme = localStorage.getItem('hanaxia_theme');
+    const savedPrompt = localStorage.getItem('hanaxia_system_prompt');
+
+    if (savedConvos) setConversations(JSON.parse(savedConvos));
+    if (savedTheme) setIsDarkMode(savedTheme === 'dark');
+    if (savedPrompt) setSystemPrompt(savedPrompt);
+
+    const parsedConvos = savedConvos ? JSON.parse(savedConvos) : [];
+    if (parsedConvos.length === 0) {
       handleNewChat();
+    } else {
+      setActiveId(parsedConvos[0].id);
     }
   }, []);
 
-  // Sync state with localStorage and document class
+  // Sync with localStorage
   useEffect(() => {
     localStorage.setItem('hanaxia_conversations', JSON.stringify(conversations));
-  }, [conversations]);
-
-  useEffect(() => {
     localStorage.setItem('hanaxia_theme', isDarkMode ? 'dark' : 'light');
+    localStorage.setItem('hanaxia_system_prompt', systemPrompt);
+    
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    localStorage.setItem('hanaxia_system_prompt', systemPrompt);
-  }, [systemPrompt]);
+  }, [conversations, isDarkMode, systemPrompt]);
 
   const activeConversation = conversations.find(c => c.id === activeId);
 
@@ -156,15 +147,6 @@ const App: React.FC = () => {
       }
     } catch (err) {
       console.error(err);
-      setConversations(prev => prev.map(c => {
-        if (c.id === activeId) {
-          const newMessages = [...c.messages];
-          const lastIdx = newMessages.length - 1;
-          newMessages[lastIdx] = { ...newMessages[lastIdx], content: "Error: Failed to fetch response." };
-          return { ...c, messages: newMessages };
-        }
-        return c;
-      }));
     } finally {
       setIsStreaming(false);
     }
@@ -178,19 +160,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleUpdateTitle = (id: string, newTitle: string) => {
-    setConversations(prev => prev.map(c => 
-      c.id === id ? { ...c, title: newTitle } : c
-    ));
-  };
-
-  const handleClearHistory = () => {
-    if (window.confirm("Clear all chats?")) {
-      setConversations([]);
-      handleNewChat();
-    }
-  };
-
   return (
     <div className="flex h-full w-full overflow-hidden bg-white dark:bg-[#0d1117] transition-colors duration-300">
       <SystemPromptModal 
@@ -200,10 +169,11 @@ const App: React.FC = () => {
         onSave={setSystemPrompt}
       />
 
+      {/* Floating Re-open Button for Mobile */}
       {!isSidebarOpen && (
         <button 
           onClick={() => setIsSidebarOpen(true)}
-          className="fixed bottom-4 left-4 z-50 p-3 bg-indigo-600 text-white rounded-full shadow-lg md:hidden hover:bg-indigo-700 transition-all active:scale-95"
+          className="fixed bottom-4 left-4 z-50 p-3 bg-indigo-600 text-white rounded-full shadow-lg md:hidden hover:bg-indigo-700 transition-all active:scale-95 animate-in fade-in zoom-in"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" /></svg>
         </button>
@@ -217,21 +187,30 @@ const App: React.FC = () => {
         onSelect={setActiveId}
         onNewChat={handleNewChat}
         onDelete={handleDeleteConversation}
-        onUpdateTitle={handleUpdateTitle}
-        onClearHistory={handleClearHistory}
         isDarkMode={isDarkMode}
         toggleTheme={() => setIsDarkMode(!isDarkMode)}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 relative">
+      <main className="flex-1 flex flex-col min-w-0 relative h-full transition-all duration-300">
         <header className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 md:px-8 bg-white/80 dark:bg-[#0d1117]/80 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-3 overflow-hidden">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors hidden md:block"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all hidden md:block"
+              title={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
             >
-               <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h8m-8 6h16" /></svg>
+               <svg 
+                 className={`w-5 h-5 text-gray-500 transition-transform duration-300 ${isSidebarOpen ? '' : 'rotate-180'}`} 
+                 fill="none" 
+                 stroke="currentColor" 
+                 viewBox="0 0 24 24"
+               >
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+               </svg>
             </button>
+            <h1 className="font-semibold text-lg truncate text-gray-800 dark:text-gray-100">
+              {activeConversation?.title || 'New Chat'}
+            </h1>
           </div>
           <div className="flex items-center gap-4">
              <select 
