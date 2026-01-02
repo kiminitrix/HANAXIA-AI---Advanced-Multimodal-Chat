@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Sidebar } from './components/Sidebar';
@@ -14,45 +13,55 @@ import { MODELS, INITIAL_SYSTEM_PROMPT } from './constants';
 import { geminiService } from './services/geminiService';
 
 const App: React.FC = () => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  // Initialize state directly from localStorage to prevent theme/content flicker
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    const saved = localStorage.getItem('hanaxia_conversations');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('hanaxia_theme');
+    // Default to true (dark mode) if no preference is saved
+    return saved ? saved === 'dark' : true;
+  });
+
+  const [systemPrompt, setSystemPrompt] = useState<string>(() => {
+    return localStorage.getItem('hanaxia_system_prompt') || INITIAL_SYSTEM_PROMPT;
+  });
+
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(true);
-  const [systemPrompt, setSystemPrompt] = useState(INITIAL_SYSTEM_PROMPT);
   const [selectedModelId, setSelectedModelId] = useState(MODELS[0].id);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
 
-  // Load state from local storage on mount
+  // Set initial active chat on mount
   useEffect(() => {
-    const savedConvos = localStorage.getItem('hanaxia_conversations');
-    const savedTheme = localStorage.getItem('hanaxia_theme');
-    const savedPrompt = localStorage.getItem('hanaxia_system_prompt');
-
-    if (savedConvos) setConversations(JSON.parse(savedConvos));
-    if (savedTheme) setIsDarkMode(savedTheme === 'dark');
-    if (savedPrompt) setSystemPrompt(savedPrompt);
-
-    const parsedConvos = savedConvos ? JSON.parse(savedConvos) : [];
-    if (parsedConvos.length === 0) {
+    if (conversations.length > 0 && !activeId) {
+      setActiveId(conversations[0].id);
+    } else if (conversations.length === 0) {
       handleNewChat();
-    } else {
-      setActiveId(parsedConvos[0].id);
     }
   }, []);
 
-  // Sync with localStorage
+  // Sync state with localStorage
   useEffect(() => {
     localStorage.setItem('hanaxia_conversations', JSON.stringify(conversations));
-    localStorage.setItem('hanaxia_theme', isDarkMode ? 'dark' : 'light');
+  }, [conversations]);
+
+  useEffect(() => {
     localStorage.setItem('hanaxia_system_prompt', systemPrompt);
-    
+  }, [systemPrompt]);
+
+  // Handle dark mode side effects
+  useEffect(() => {
+    localStorage.setItem('hanaxia_theme', isDarkMode ? 'dark' : 'light');
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [conversations, isDarkMode, systemPrompt]);
+  }, [isDarkMode]);
 
   const activeConversation = conversations.find(c => c.id === activeId);
 
@@ -108,8 +117,7 @@ const App: React.FC = () => {
     }));
 
     try {
-      const activeConvo = conversations.find(c => c.id === activeId);
-      const history = activeConvo ? [...activeConvo.messages, userMessage] : [userMessage];
+      const history = activeConversation ? [...activeConversation.messages, userMessage] : [userMessage];
       const model = MODELS.find(m => m.id === selectedModelId) || MODELS[0];
 
       if (model.provider === ModelProvider.GEMINI) {
@@ -129,24 +137,29 @@ const App: React.FC = () => {
           }));
         }
       } else {
-        const dummyText = `This is a simulated response from ${model.name}.`;
-        let partial = '';
-        for (const word of dummyText.split(' ')) {
-          partial += word + ' ';
-          setConversations(prev => prev.map(c => {
-            if (c.id === activeId) {
-              const newMessages = [...c.messages];
-              const lastIdx = newMessages.length - 1;
-              newMessages[lastIdx] = { ...newMessages[lastIdx], content: partial };
-              return { ...c, messages: newMessages };
-            }
-            return c;
-          }));
-          await new Promise(r => setTimeout(r, 50));
-        }
+        // Fallback for non-implemented providers
+        const dummyText = `Provider ${model.provider} is currently in preview. Use Gemini for live generation.`;
+        setConversations(prev => prev.map(c => {
+          if (c.id === activeId) {
+            const newMessages = [...c.messages];
+            const lastIdx = newMessages.length - 1;
+            newMessages[lastIdx] = { ...newMessages[lastIdx], content: dummyText };
+            return { ...c, messages: newMessages };
+          }
+          return c;
+        }));
       }
     } catch (err) {
       console.error(err);
+      setConversations(prev => prev.map(c => {
+        if (c.id === activeId) {
+          const newMessages = [...c.messages];
+          const lastIdx = newMessages.length - 1;
+          newMessages[lastIdx] = { ...newMessages[lastIdx], content: "Sorry, I encountered an error. Please check your API key and network." };
+          return { ...c, messages: newMessages };
+        }
+        return c;
+      }));
     } finally {
       setIsStreaming(false);
     }
@@ -174,6 +187,7 @@ const App: React.FC = () => {
         <button 
           onClick={() => setIsSidebarOpen(true)}
           className="fixed bottom-4 left-4 z-50 p-3 bg-indigo-600 text-white rounded-full shadow-lg md:hidden hover:bg-indigo-700 transition-all active:scale-95 animate-in fade-in zoom-in"
+          aria-label="Open Sidebar"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" /></svg>
         </button>
@@ -216,7 +230,7 @@ const App: React.FC = () => {
              <select 
                value={selectedModelId}
                onChange={(e) => setSelectedModelId(e.target.value)}
-               className="bg-gray-50 dark:bg-gray-800 border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer outline-none"
+               className="bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer outline-none"
              >
                {MODELS.map(m => (
                  <option key={m.id} value={m.id}>{m.name}</option>

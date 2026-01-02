@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HANAXIA AI</title>
     <script src="https://cdn.tailwindcss.com?plugins=typography,forms,aspect-ratio"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -63,6 +75,13 @@
             font-size: 0.75rem;
             font-family: monospace;
         }
+
+        /* Smooth theme transitions */
+        * {
+            transition-property: background-color, border-color, text-decoration-color, fill, stroke;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 200ms;
+        }
     </style>
 <script type="importmap">
 {
@@ -82,7 +101,7 @@
 }
 </script>
 </head>
-<body class="h-full bg-white dark:bg-[#0d1117] text-slate-900 dark:text-slate-100 transition-colors duration-200">
+<body class="h-full bg-white dark:bg-[#0d1117] text-slate-900 dark:text-slate-100">
     <div id="root" class="h-full"></div>
 </body>
 </html>
