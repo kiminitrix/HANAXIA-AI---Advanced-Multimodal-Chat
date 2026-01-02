@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Conversation } from '../types';
 
@@ -41,16 +40,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
       `}>
         <div className="flex flex-col h-full w-80">
           <div className="p-4 flex flex-col gap-4 h-full">
-            {/* Action Header */}
-            <div className="flex items-center justify-between min-h-[40px]">
-              <h2 className="text-xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent truncate">
-                HANAXIA AI
-              </h2>
+            
+            {/* Centered Brand Identity - Side Navigation */}
+            <div className="relative flex flex-col items-center justify-center py-8">
+              <div className="flex items-center gap-3.5 group cursor-default">
+                {/* Logo Mark */}
+                <div className="w-11 h-11 bg-gradient-to-tr from-[#6366f1] to-[#a855f7] rounded-[14px] flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-300">
+                  <span className="text-white font-bold text-2xl leading-none">H</span>
+                </div>
+                {/* Wordmark */}
+                <h2 className="text-2xl font-black bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 bg-clip-text text-transparent tracking-tighter">
+                  HANAXIA
+                </h2>
+              </div>
+              
+              {/* Mobile Close Button (Absolute positioned) */}
               <button 
                 onClick={onClose}
-                className="md:hidden p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="absolute top-2 right-0 md:hidden p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500"
+                aria-label="Close Sidebar"
               >
-                <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
 

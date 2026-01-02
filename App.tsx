@@ -207,14 +207,14 @@ const App: React.FC = () => {
 
       <main className="flex-1 flex flex-col min-w-0 relative h-full transition-all duration-300">
         <header className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 md:px-8 bg-white/80 dark:bg-[#0d1117]/80 backdrop-blur-md sticky top-0 z-10">
-          <div className="flex items-center gap-3 overflow-hidden">
+          <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all hidden md:block"
               title={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
             >
                <svg 
-                 className={`w-5 h-5 text-gray-500 transition-transform duration-300 ${isSidebarOpen ? '' : 'rotate-180'}`} 
+                 className={`w-5.5 h-5.5 text-gray-500 transition-transform duration-300 ${isSidebarOpen ? '' : 'rotate-180'}`} 
                  fill="none" 
                  stroke="currentColor" 
                  viewBox="0 0 24 24"
@@ -222,10 +222,18 @@ const App: React.FC = () => {
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                </svg>
             </button>
-            <h1 className="font-semibold text-lg truncate text-gray-800 dark:text-gray-100">
-              {activeConversation?.title || 'New Chat'}
-            </h1>
+            
+            {/* Header Brand Identity - Same level as toggle button */}
+            <div className="flex items-center gap-2.5 animate-in fade-in slide-in-from-left-2 duration-500 group cursor-default">
+              <div className="w-8 h-8 bg-gradient-to-tr from-[#6366f1] to-[#a855f7] rounded-[10px] flex items-center justify-center shadow-md shadow-indigo-500/10">
+                <span className="text-white font-bold text-base leading-none">H</span>
+              </div>
+              <span className="text-xl font-black bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent tracking-tighter">
+                HANAXIA
+              </span>
+            </div>
           </div>
+
           <div className="flex items-center gap-4">
              <select 
                value={selectedModelId}
