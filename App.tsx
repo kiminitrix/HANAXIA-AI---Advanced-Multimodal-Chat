@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
+import { SystemPromptModal } from './components/SystemPromptModal';
 import { 
   Message, 
   Role, 
@@ -19,6 +21,7 @@ const App: React.FC = () => {
   const [systemPrompt, setSystemPrompt] = useState(INITIAL_SYSTEM_PROMPT);
   const [selectedModelId, setSelectedModelId] = useState(MODELS[0].id);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
 
   // Load state from local storage on mount
   useEffect(() => {
@@ -31,8 +34,11 @@ const App: React.FC = () => {
     if (savedPrompt) setSystemPrompt(savedPrompt);
 
     // Default to a new conversation if none exist
-    if (!savedConvos || JSON.parse(savedConvos).length === 0) {
+    const parsedConvos = savedConvos ? JSON.parse(savedConvos) : [];
+    if (parsedConvos.length === 0) {
       handleNewChat();
+    } else {
+      setActiveId(parsedConvos[0].id);
     }
   }, []);
 
@@ -163,7 +169,8 @@ const App: React.FC = () => {
   const handleDeleteConversation = (id: string) => {
     setConversations(prev => prev.filter(c => c.id !== id));
     if (activeId === id) {
-      setActiveId(conversations[0]?.id || null);
+      const remaining = conversations.filter(c => c.id !== id);
+      setActiveId(remaining[0]?.id || null);
     }
   };
 
@@ -176,6 +183,13 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-white dark:bg-[#0d1117] transition-colors duration-300">
+      <SystemPromptModal 
+        isOpen={isPromptModalOpen}
+        onClose={() => setIsPromptModalOpen(false)}
+        currentPrompt={systemPrompt}
+        onSave={setSystemPrompt}
+      />
+
       {/* Sidebar Overlay for Mobile */}
       {!isSidebarOpen && (
         <button 
@@ -197,6 +211,7 @@ const App: React.FC = () => {
         onClearHistory={handleClearHistory}
         isDarkMode={isDarkMode}
         toggleTheme={() => setIsDarkMode(!isDarkMode)}
+        onOpenPromptSettings={() => setIsPromptModalOpen(true)}
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative">
@@ -224,10 +239,7 @@ const App: React.FC = () => {
                ))}
              </select>
              <button 
-              onClick={() => {
-                const p = prompt("Customize System Instruction:", systemPrompt);
-                if (p !== null) setSystemPrompt(p);
-              }}
+              onClick={() => setIsPromptModalOpen(true)}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-400"
               title="System Prompt"
              >
