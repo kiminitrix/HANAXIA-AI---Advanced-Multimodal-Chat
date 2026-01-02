@@ -59,7 +59,7 @@ const App: React.FC = () => {
   const handleNewChat = useCallback(() => {
     const newConvo: Conversation = {
       id: uuidv4(),
-      title: 'New Conversation',
+      title: 'New Chat',
       messages: [],
       model: selectedModelId,
       provider: MODELS.find(m => m.id === selectedModelId)?.provider || ModelProvider.GEMINI,
@@ -174,7 +174,7 @@ const App: React.FC = () => {
   };
 
   const handleClearHistory = () => {
-    if (window.confirm("Clear all conversations?")) {
+    if (window.confirm("Clear all chats?")) {
       setConversations([]);
       handleNewChat();
     }
