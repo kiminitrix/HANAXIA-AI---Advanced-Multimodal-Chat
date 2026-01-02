@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Sidebar } from './components/Sidebar';
@@ -211,7 +210,6 @@ const App: React.FC = () => {
         onClearHistory={handleClearHistory}
         isDarkMode={isDarkMode}
         toggleTheme={() => setIsDarkMode(!isDarkMode)}
-        onOpenPromptSettings={() => setIsPromptModalOpen(true)}
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative">
