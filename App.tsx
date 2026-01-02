@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Sidebar } from './components/Sidebar';
@@ -173,6 +174,12 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateTitle = (id: string, newTitle: string) => {
+    setConversations(prev => prev.map(c => 
+      c.id === id ? { ...c, title: newTitle } : c
+    ));
+  };
+
   const handleClearHistory = () => {
     if (window.confirm("Clear all chats?")) {
       setConversations([]);
@@ -207,6 +214,7 @@ const App: React.FC = () => {
         onSelect={setActiveId}
         onNewChat={handleNewChat}
         onDelete={handleDeleteConversation}
+        onUpdateTitle={handleUpdateTitle}
         onClearHistory={handleClearHistory}
         isDarkMode={isDarkMode}
         toggleTheme={() => setIsDarkMode(!isDarkMode)}

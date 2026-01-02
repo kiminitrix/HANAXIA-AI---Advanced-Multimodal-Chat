@@ -33,9 +33,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                </div>
                <div className="text-center">
-                 <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">How can I help you today?</h3>
+                 <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Welcome to HANAXIA</h3>
                  <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                    Ask questions, write code, analyze data, or just have a chat with HANAXIA AI.
+                    Experience the power of Gemini 3. Start a conversation to explore ideas, write code, or just chat.
                  </p>
                </div>
                

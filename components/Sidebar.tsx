@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { Conversation } from '../types';
 
 interface SidebarProps {
@@ -9,6 +10,7 @@ interface SidebarProps {
   onSelect: (id: string) => void;
   onNewChat: () => void;
   onDelete: (id: string) => void;
+  onUpdateTitle: (id: string, newTitle: string) => void;
   onClearHistory: () => void;
   isDarkMode: boolean;
   toggleTheme: () => void;
@@ -22,10 +24,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelect,
   onNewChat,
   onDelete,
+  onUpdateTitle,
   onClearHistory,
   isDarkMode,
   toggleTheme
 }) => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [tempTitle, setTempTitle] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
+
+  const handleStartEdit = (e: React.MouseEvent, convo: Conversation) => {
+    e.stopPropagation();
+    setEditingId(convo.id);
+    setTempTitle(convo.title);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingId && tempTitle.trim()) {
+      onUpdateTitle(editingId, tempTitle.trim());
+    }
+    setEditingId(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      setEditingId(null);
+    }
+  };
+
   return (
     <aside className={`
       fixed md:relative z-40 h-full w-80 bg-gray-50 dark:bg-[#161b22] border-r border-gray-200 dark:border-gray-800 transition-all duration-300
@@ -72,22 +107,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => onSelect(convo.id)}
                 >
                   <div className="flex-1 overflow-hidden">
-                    <p className={`text-sm truncate ${activeId === convo.id ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}>
-                      {convo.title}
-                    </p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
-                      {new Date(convo.createdAt).toLocaleDateString()}
-                    </p>
+                    {editingId === convo.id ? (
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={tempTitle}
+                        onChange={(e) => setTempTitle(e.target.value)}
+                        onBlur={handleSaveEdit}
+                        onKeyDown={handleKeyDown}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full bg-gray-100 dark:bg-gray-900 border-none rounded px-1 py-0.5 text-sm focus:ring-1 focus:ring-indigo-500 text-gray-900 dark:text-gray-100"
+                      />
+                    ) : (
+                      <>
+                        <p className={`text-sm truncate ${activeId === convo.id ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}`}>
+                          {convo.title}
+                        </p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                          {new Date(convo.createdAt).toLocaleDateString()}
+                        </p>
+                      </>
+                    )}
                   </div>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(convo.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 transition-all rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
+                  
+                  {editingId !== convo.id && (
+                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={(e) => handleStartEdit(e, convo)}
+                        className="p-1.5 text-gray-400 hover:text-indigo-500 transition-all rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                        title="Rename Chat"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(convo.id);
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-red-500 transition-all rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
+                        title="Delete Chat"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))
             )}
